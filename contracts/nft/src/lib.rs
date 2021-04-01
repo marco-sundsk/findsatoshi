@@ -41,20 +41,35 @@ pub struct Contract {
     /// The storage size in bytes for one account.
     pub extra_storage_in_bytes_per_token: StorageUsage,
 
-    pub metadata: NFTMetadata
+    // pub metadata: NFTMetadata
 }
 
 #[near_bindgen]
 impl Contract {
+    // #[init]
+    // pub fn new(owner_id: ValidAccountId, metadata: NFTMetadata) -> Self {
+    //     assert!(!env::state_exists(), "Already initialized");
+    //     let mut this = Self {
+    //         tokens_per_owner: LookupMap::new(b"a".to_vec()),
+    //         tokens_by_id: UnorderedMap::new(b"t".to_vec()),
+    //         owner_id: owner_id.into(),
+    //         extra_storage_in_bytes_per_token: 0,
+    //         metadata
+    //     };
+
+    //     this.measure_min_token_storage_cost();
+
+    //     this
+    // }
+
     #[init]
-    pub fn new(owner_id: ValidAccountId, metadata: NFTMetadata) -> Self {
+    pub fn new(owner_id: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let mut this = Self {
             tokens_per_owner: LookupMap::new(b"a".to_vec()),
             tokens_by_id: UnorderedMap::new(b"t".to_vec()),
             owner_id: owner_id.into(),
             extra_storage_in_bytes_per_token: 0,
-            metadata
         };
 
         this.measure_min_token_storage_cost();

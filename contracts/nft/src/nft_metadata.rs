@@ -12,7 +12,7 @@ pub struct NFTMetadata {
     reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TokenMetadata {
     title: Option<String>, // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
@@ -36,6 +36,15 @@ pub trait NonFungibleTokenMetadata {
 #[near_bindgen]
 impl NonFungibleTokenMetadata for Contract {
     fn nft_metadata(&self) -> NFTMetadata {
-        self.metadata.clone()
+        // self.metadata.clone()
+        NFTMetadata {
+            spec: String::from("findsatoshi-nft-1.0.0"),
+            name: String::from("FindsatoshiNft"),
+            symbol: String::from("FST"),
+            icon: Some(String::from("")),
+            base_uri: Some(String::from("")),
+            reference: None,
+            reference_hash: None,
+        }
     }
 }
