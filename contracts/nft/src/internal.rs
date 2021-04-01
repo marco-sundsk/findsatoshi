@@ -111,8 +111,10 @@ impl Contract {
         memo: Option<String>,
     ) -> (AccountId, HashSet<AccountId>) {
         let Token {
+            sn,
             owner_id,
-            metadata,
+            metadata_id,
+            status,
             approved_account_ids,
         } = self.tokens_by_id.get(token_id).expect("Token not found");
         if sender_id != &owner_id && !approved_account_ids.contains(sender_id) {
@@ -144,8 +146,10 @@ impl Contract {
         self.internal_add_token_to_owner(receiver_id, token_id);
 
         let token = Token {
+            sn,
             owner_id: receiver_id.clone(),
-            metadata,
+            metadata_id,
+            status,
             approved_account_ids: Default::default(),
         };
         self.tokens_by_id.insert(token_id, &token);

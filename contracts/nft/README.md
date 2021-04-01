@@ -11,16 +11,16 @@ export NFTID=findsatoshi-nft.testnet
 
 ```shell
 near call $NFTID nft_mint '{"token_id": "testtoken01", 
-    "metadata": {"title": "nft-title", 
+    "metadata": {"title": "熊猫-T80S", 
         "description": "nft-description", 
         "media": null, 
         "media_hash": null, 
-        "copies": "5", 
+        "copies": "500", 
         "issued_at": "2021-04-01T14:00:01Z", 
         "expires_at": null, 
         "starts_at": "2021-04-01T14:00:01Z", 
         "updated_at": "2021-04-01T14:00:01Z", 
-        "extra": "no-extra", 
+        "extra": "{\"id\": \"miner001\", \"type\": \"熊猫-T80S\", \"Thash\": 110, \"W\": 3250}", 
         "reference": null,
         "reference_hash": null}}' --account_id=$OWNERID --amount=1
 

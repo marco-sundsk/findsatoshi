@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
@@ -9,32 +9,46 @@ use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise, S
 use crate::internal::*;
 pub use crate::mint::*;
 pub use crate::nft_core::*;
+pub use crate::custom::*;
 use crate::nft_metadata::{TokenMetadata, NFTMetadata};
 
 mod internal;
 mod mint;
 mod nft_core;
 mod nft_metadata;
+mod custom;
 
 #[global_allocator]
 static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc::INIT;
 
 pub type TokenId = String;
+pub type TokenSeqNum = String;
+pub type TokenMetadataId = String;
+/// 0 - normal, 1 - malfunction
+pub type TokenStatus = u8;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Token {
+    pub sn: TokenSeqNum,
     pub owner_id: AccountId,
-    pub metadata: TokenMetadata,
+    pub metadata_id: TokenMetadataId,
+    pub status: TokenStatus,
     pub approved_account_ids: HashSet<AccountId>,
 }
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
+    /// to be eliminate, update to miners_per_owner
     pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
+    /// 
+    pub miners_per_owner: LookupMap<AccountId, UnorderedMap<TokenMetadataId, UnorderedSet<TokenId>>>,
 
+    /// TokenId is formed as TokenMetadataId + "#" + TokenSeqNum
     pub tokens_by_id: UnorderedMap<TokenId, Token>,
+    /// TokenMetadataId is designated by owner when mint
+    pub metadata_by_id: UnorderedMap<TokenMetadataId, TokenMetadata>,
 
     pub owner_id: AccountId,
 
@@ -67,7 +81,9 @@ impl Contract {
         assert!(!env::state_exists(), "Already initialized");
         let mut this = Self {
             tokens_per_owner: LookupMap::new(b"a".to_vec()),
+            miners_per_owner: LookupMap::new(b"u".to_vec()),
             tokens_by_id: UnorderedMap::new(b"t".to_vec()),
+            metadata_by_id: UnorderedMap::new(b"m".to_vec()),
             owner_id: owner_id.into(),
             extra_storage_in_bytes_per_token: 0,
         };
