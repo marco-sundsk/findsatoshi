@@ -15,16 +15,16 @@ pub struct NFTMetadata {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TokenMetadata {
-    title: Option<String>, // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
-    description: Option<String>, // free-form description
+    title: Option<String>, // used as Category: Miner or Power;
+    description: Option<String>, // used as Sub-category: Miner types, Power types,
     media: Option<String>, // URL to associated media, preferably to decentralized, content-addressed storage
     media_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of content referenced by the `media` field. Required if `media` is included.
-    copies: Option<U64>, // number of copies of this set of metadata in existence when token was minted.
+    pub copies: Option<U64>, // number of copies of this kind of nft.
     issued_at: Option<String>, // ISO 8601 datetime when token was issued or minted
     expires_at: Option<String>, // ISO 8601 datetime when token expires
     starts_at: Option<String>, // ISO 8601 datetime when token starts being valid
     updated_at: Option<String>, // ISO 8601 datetime when token was last updated
-    extra: Option<String>, // anything extra the NFT wants to store on-chain. Can be stringified JSON.
+    pub extra: Option<String>, // JSON-string: {"Thash": nnnn, "W": nnn} for Miner, {"class": "fire/water/nulcear", ...}
     reference: Option<String>, // URL to an off-chain JSON file with more info.
     reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }

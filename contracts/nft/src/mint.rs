@@ -3,16 +3,18 @@ use crate::*;
 #[near_bindgen]
 impl Contract {
 
-    #[payable]
+    /// mint miner nft
     pub fn create_new_miners(&mut self, token_owner: ValidAccountId, 
-        metadata_id: TokenMetadataId, quantity: u32, metadata: TokenMetadata) {
-
-        let initial_storage_usage = env::storage_usage();
+        metadata_id: TokenMetadataId, metadata: TokenMetadata
+    ) {
+        
         self.assert_owner();
+
+        let quantity: u64 = metadata.copies.unwrap_or(1.into()).into();
 
         assert!(
             self.metadata_by_id.insert(&metadata_id, &metadata).is_none(),
-            "miners already exists"
+            "This ID already exists"
         );
 
         for sn_number in 0..quantity {
@@ -20,7 +22,13 @@ impl Contract {
                 sn: format!("{}", sn_number),
                 owner_id: token_owner.as_ref().clone(),
                 metadata_id: metadata_id.clone(),
+                
+                operator: token_owner.as_ref().clone(),
                 status: 0,
+                switch: 0,
+
+                power_left: 0,
+                power_deadline: 0,
                 approved_account_ids: Default::default(),
             };
             let token_id: String = format!("{}#{}", token.metadata_id, token.sn);
@@ -30,12 +38,26 @@ impl Contract {
             );
             self.internal_add_token_to_owner(&token.owner_id, &token_id);
         }
+    }
 
-        let new_token_size_in_bytes = env::storage_usage() - initial_storage_usage;
-        let required_storage_in_bytes =
-            self.extra_storage_in_bytes_per_token * quantity as u64 + new_token_size_in_bytes;
+    /// mint power card
+    pub fn issue_power_cards(&mut self, power_owner: ValidAccountId, 
+        metadata_id: TokenMetadataId, metadata: TokenMetadata
+    ) {
 
-        deposit_refund(required_storage_in_bytes);
+        self.assert_owner();
+
+        let quantity: u64 = metadata.copies.unwrap_or(1.into()).into();
+
+        assert!(
+            self.metadata_by_id.insert(&metadata_id, &metadata).is_none(),
+            "This ID already exists"
+        );
+
+        let mut power_map = self.powers_per_owner.get(power_owner.as_ref())
+            .unwrap_or_else(|| UnorderedMap::new(unique_power_prefix(power_owner.as_ref())));
+        power_map.insert(&metadata_id, &(quantity as u32));
+        self.powers_per_owner.insert(power_owner.as_ref(), &power_map);
     }
 
 }
