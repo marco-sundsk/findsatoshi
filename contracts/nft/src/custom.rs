@@ -49,6 +49,10 @@ impl Contract {
 
     pub fn consume_powers_by_tokens(&mut self, power_card: TokenMetadataId, token_ids: Vec<TokenId>
     ) {
+        env::log(
+            format!(
+                "This function is underconstruction. {}, {}", token_ids.len(), power_card
+            ).as_bytes());
 
     }
 
@@ -56,7 +60,10 @@ impl Contract {
         power_card: TokenMetadataId, 
         tokenmetadata_id: TokenMetadataId
     ) {
-        
+        env::log(
+            format!(
+                "This function is underconstruction. {}, {}", tokenmetadata_id, power_card
+            ).as_bytes());
 
     }
 
@@ -67,12 +74,12 @@ impl Contract {
     /// list all miner types created in this contract
     pub fn list_miner_types(&self, from_index: u64, limit: u64
     ) ->HashMap<TokenMetadataId, TokenMetadata> {
-        let keys = self.metadata_by_id.keys_as_vector();
+        let keys = self.token_metadata_by_id.keys_as_vector();
 
         (from_index..std::cmp::min(from_index + limit, keys.len())).map(
             |index| (
                 keys.get(index).unwrap(), 
-                self.metadata_by_id.get(&keys.get(index).unwrap()).unwrap())
+                self.token_metadata_by_id.get(&keys.get(index).unwrap()).unwrap())
         ).collect::<HashMap<_,_>>()
     }
 
@@ -89,7 +96,7 @@ impl Contract {
         (from_index..std::cmp::min(from_index + limit, keys.len())).map(
             |index| (
                 keys.get(index).unwrap(), 
-                self.metadata_by_id.get(&keys.get(index).unwrap()).unwrap())
+                self.token_metadata_by_id.get(&keys.get(index).unwrap()).unwrap())
         ).collect::<HashMap<_,_>>()
     }
 

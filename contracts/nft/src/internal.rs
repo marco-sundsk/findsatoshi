@@ -1,11 +1,5 @@
 use crate::*;
 
-use uint::construct_uint;
-
-construct_uint! {
-    /// 256-bit unsigned integer.
-    pub struct U256(4);
-}
 
 const YOCTO_MULTIPLIER: f32 = 0.000000000000000000000001;
 
@@ -15,14 +9,22 @@ pub(crate) const STORAGE_PRICE_PER_BYTE: Balance = 10_000_000_000_000_000_000;
 
 pub(crate) fn unique_prefix(account_id: &AccountId) -> Vec<u8> {
     let mut prefix = Vec::with_capacity(33);
-    prefix.push(b'o');
+    prefix.push(b'x');
     prefix.extend(env::sha256(account_id.as_bytes()));
+    prefix
+}
+
+pub(crate) fn unique_prefix_for_owner_token(account_id: &AccountId, metadata_id: &MinerMetadataId) -> Vec<u8> {
+    let mut prefix = Vec::with_capacity(65);
+    prefix.push(b'y');
+    prefix.extend(env::sha256(account_id.as_bytes()));
+    prefix.extend(env::sha256(metadata_id.as_bytes()));
     prefix
 }
 
 pub(crate) fn unique_power_prefix(account_id: &AccountId) -> Vec<u8> {
     let mut prefix = Vec::with_capacity(33);
-    prefix.push(b'p');
+    prefix.push(b'z');
     prefix.extend(env::sha256(account_id.as_bytes()));
     prefix
 }
@@ -80,96 +82,6 @@ pub(crate) fn refund_approved_account_ids(
 
 impl Contract {
 
-    pub(crate) fn make_random_value(&self) -> Thash {
-
-        let randomness = env::random_seed();
-        let ptr: *const u8 = randomness.as_ptr();
-        let ptr: *const u128 = ptr as *const u128;
-        let big_rand: u128 = unsafe { *ptr };
-
-        let value = U256::from(self.current_total_thash) * U256::from(big_rand) 
-            / (U256::from(u128::max_value()) + U256::from(1));
-        
-        env::log(format!("Random number is {} in epoch {}.", value.as_u128(), self.current_mining_epoch).as_bytes());
-
-        value.as_u128() as Thash
-    }
-
-    pub(crate) fn find_block_producer(&self, value: Thash) -> AccountId {
-        let keys = self.mining_entities.keys_as_vector();
-        let mut border: Thash = 0;
-        let mut ret = self.owner_id.clone();
-        for index in 0..keys.len() {
-            let entity = keys.get(index).unwrap();
-            let thash = self.mining_entities.get(&entity).unwrap();
-            border += thash;
-            if border > value {
-                ret = entity;
-                break;
-            }
-        }
-        env::log(format!("{} produced rbtc block in {}.", ret, self.current_mining_epoch).as_bytes());
-        ret
-    }
-
-    pub(crate) fn get_miner_metadata(&self, token: &Token) -> MinerMetadata {
-        let extra = self.metadata_by_id.get(&token.metadata_id)
-            .expect("Internal Error: No metadata").extra.expect("Internal Error: No extra");
-        near_sdk::serde_json::from_str(&extra).unwrap()
-    }
-
-    pub(crate) fn get_power_endline(&self, power_left: u32, metadata: &MinerMetadata) -> (u32, MiningEpoch) {
-        let hours = power_left / metadata.w;
-        let remain = power_left - hours * metadata.w;
-        (remain, self.current_mining_epoch + hours)
-    }
-
-    pub(crate) fn get_power_refund(&self, epoch_diff: u32, metadata: &MinerMetadata) -> u32 {
-        let hours = epoch_diff;
-        hours * metadata.w
-    }
-
-    pub(crate) fn internal_thash_reduce(&mut self, owner_id: &AccountId, metadata: &MinerMetadata) {
-        // update total thash
-        self.current_total_thash -= metadata.thash;
-        let owner_thash = self.mining_entities.get(owner_id).expect("Internal Error: no this mining entity");
-        let thash_leftover = owner_thash - metadata.thash;
-        if thash_leftover > 0 {
-            self.mining_entities.insert(owner_id, &thash_leftover);
-        } else {
-            self.mining_entities.remove(owner_id);
-        }
-    }
-
-    /// called in the end of mining settlement each epoch,
-    /// to update power consume
-    pub(crate) fn settle_power_for_individuals(&mut self) {
-        env::log(format!("settle_power_for_individuals.").as_bytes());
-        let miners = self.power_events.get(&self.current_mining_epoch)
-            .unwrap_or(UnorderedSet::new(b"non-relevant".to_vec()));
-        for token_id in miners.iter() {
-            let mut miner = self.tokens_by_id.get(&token_id).expect("Internal Error: Miner not exist.");
-            miner.switch = PW_OFF;
-            self.tokens_by_id.insert(&token_id, &miner);
-
-            let extra = self.metadata_by_id.get(&miner.metadata_id)
-                .expect("Internal Error: No metadata").extra.expect("Internal Error: No extra");
-            let metadata: MinerMetadata = near_sdk::serde_json::from_str(&extra).unwrap();
-            self.internal_thash_reduce(&miner.owner_id, &metadata);
-        }
-        self.power_events.remove(&self.current_mining_epoch);
-    }
-    
-    pub(crate) fn settle_power_for_pools(&mut self) {
-        env::log(format!("settle_power_for_pools, under construction.").as_bytes());
-    }
-
-    pub(crate) fn settle_random_failures(&mut self) {
-        env::log(format!("settle_random_failures, under construction.").as_bytes());
-    }
-
-    //*********************************************************
-
     pub(crate) fn assert_owner(&self) {
         assert_eq!(
             &env::predecessor_account_id(),
@@ -183,12 +95,20 @@ impl Contract {
         account_id: &AccountId,
         token_id: &TokenId,
     ) {
-        let mut tokens_set = self
-            .tokens_per_owner
+        let token = self.tokens_by_id.get(token_id).expect("Internal Error:");
+
+        let mut miner_metadata_map = self
+            .miners_per_owner
             .get(account_id)
-            .unwrap_or_else(|| UnorderedSet::new(unique_prefix(account_id)));
+            .unwrap_or(UnorderedMap::new(unique_prefix(account_id)));
+
+        let mut tokens_set = miner_metadata_map
+            .get(&token.miner_metadata_id)
+            .unwrap_or_else(|| UnorderedSet::new(unique_prefix_for_owner_token(account_id, &token.miner_metadata_id)));
+        
         tokens_set.insert(token_id);
-        self.tokens_per_owner.insert(account_id, &tokens_set);
+        miner_metadata_map.insert(account_id, &tokens_set);
+        self.miners_per_owner.insert(account_id, &miner_metadata_map);
     }
 
     pub(crate) fn internal_remove_token_from_owner(
@@ -196,15 +116,25 @@ impl Contract {
         account_id: &AccountId,
         token_id: &TokenId,
     ) {
-        let mut tokens_set = self
-            .tokens_per_owner
+        let token = self.tokens_by_id.get(token_id).expect("Internal Error:");
+
+        let mut miner_metadata_map = self
+            .miners_per_owner
             .get(account_id)
+            .expect("Token should be owned by the sender");
+        let mut tokens_set = miner_metadata_map
+            .get(&token.miner_metadata_id)
             .expect("Token should be owned by the sender");
         tokens_set.remove(token_id);
         if tokens_set.is_empty() {
-            self.tokens_per_owner.remove(account_id);
+            miner_metadata_map.remove(&token.miner_metadata_id);
         } else {
-            self.tokens_per_owner.insert(account_id, &tokens_set);
+            miner_metadata_map.insert(&token.miner_metadata_id, &tokens_set);
+        }
+        if miner_metadata_map.is_empty() {
+            self.miners_per_owner.remove(account_id);
+        } else {
+            self.miners_per_owner.insert(account_id, &miner_metadata_map);
         }
     }
 
@@ -220,6 +150,7 @@ impl Contract {
             sn,
             owner_id,
             metadata_id,
+            miner_metadata_id,
             operator,
             switch,
             status,
@@ -259,6 +190,7 @@ impl Contract {
             sn,
             owner_id: receiver_id.clone(),
             metadata_id,
+            miner_metadata_id,
             operator,
             switch,
             status,

@@ -27,22 +27,27 @@ pub struct HumanReadableMiningPool {
     pub miners: Vec<TokenId>,
 }
 
-pub struct MiningDistribution {
-    pub mine_entity_id: AccountId,
-    pub left_border: u32,
-    pub right_border: u32,  
-}
 
 #[near_bindgen]
 impl Contract {
 
     pub fn settle_mining_epoch(&mut self) {
 
+        self.assert_owner();
+
+        if env::block_index() < self.current_epoch_start_at + self.min_interval_of_epoch {
+            env::panic("not log from last settlement.".as_bytes())
+        }
+        self.current_epoch_start_at = env::block_index();
+
         let value = self.make_random_value();
 
         let block_producer = self.find_block_producer(value);
 
-        env::log(format!("Send vBTC to {} in epoch {}.", block_producer.clone(), self.current_mining_epoch).as_bytes());
+        env::log(
+            format!(
+                "Send vBTC to {} in epoch {}.", block_producer.clone(), self.current_mining_epoch
+            ).as_bytes());
 
         self.current_mining_epoch += 1;
         self.settle_power_for_individuals();
@@ -57,23 +62,20 @@ impl Contract {
             if miner.owner_id != owner_id || miner.owner_id != miner.operator {
                 env::panic("No control of this miner.".as_bytes())
             }
-            let metadata = self.get_miner_metadata(&miner);
+            let metadata = self.miner_metadata_by_id.get(&miner.miner_metadata_id)
+                .expect("Internal Error: no miner_metadata of this miner");
             if miner.status == ST_NORMAL && miner.switch != PW_ON {
                 miner.switch = PW_ON;
                 // update total thash
-                self.current_total_thash += metadata.thash;
-                let owner_thash = self.mining_entities.get(&owner_id).unwrap_or(0);
-                self.mining_entities.insert(&owner_id, &(owner_thash + metadata.thash));
-                // update power events
-                let (remaining, mining_epoch) = self.get_power_endline(miner.power_left, &metadata);
-                if remaining == miner.power_left {
+                self.internal_increase_thash(&miner.owner_id, &metadata);
+                // consume power
+                let (used, mining_epoch) = self.get_power_consume(miner.power_left, &metadata);
+                if used == 0 {
                     env::panic("Not enough power to use.".as_bytes())
                 }
-                let mut miners_set = self.power_events.get(&mining_epoch)
-                    .unwrap_or(UnorderedSet::new(format!("{}", mining_epoch).as_bytes().to_vec()));
-                miners_set.insert(&token_id);
-                self.power_events.insert(&mining_epoch, &miners_set);
-                miner.power_left = remaining;
+                miner.power_left -= used;
+                // udapte power events
+                self.internal_add_to_power_event(&token_id, &mining_epoch);
                 // udpate miner itself
                 self.tokens_by_id.insert(&token_id, &miner);
             }
@@ -87,19 +89,14 @@ impl Contract {
             if miner.owner_id != owner_id || miner.owner_id != miner.operator {
                 env::panic("No control of this miner.".as_bytes())
             }
-            let metadata = self.get_miner_metadata(&miner);
+            let metadata = self.miner_metadata_by_id.get(&miner.miner_metadata_id)
+                .expect("Internal Error: no miner_metadata of this miner");
             if miner.status == ST_NORMAL && miner.switch != PW_OFF {
                 miner.switch = PW_OFF;
                 // update total thash
-                self.internal_thash_reduce(&miner.owner_id, &metadata);
+                self.internal_reduce_thash(&miner.owner_id, &metadata);
                 // update power events
-                let mut miner_set = self.power_events.get(&miner.power_deadline).expect("Internal Error: no this power event");
-                miner_set.remove(&token_id);
-                if miner_set.len() > 0 {
-                    self.power_events.insert(&miner.power_deadline, &miner_set);
-                } else {
-                    self.power_events.remove(&miner.power_deadline);
-                }
+                self.internal_remove_from_power_event(&token_id, &miner.power_deadline);
                 // refund power
                 miner.power_left += self.get_power_refund(miner.power_deadline - self.current_mining_epoch, &metadata);
                 // udpate miner itself
@@ -109,12 +106,17 @@ impl Contract {
     }
 
     pub fn batch_add_miners_to_pool(&mut self, token_ids: Vec<TokenId>, mining_pool: AccountId) {
-        let owner_id = env::predecessor_account_id();
-
+        env::log(
+            format!(
+                "This function is underconstruction. {}, {}", token_ids.len(), mining_pool
+            ).as_bytes());
     }
 
     pub fn batch_retrieve_miners_from_pool(&mut self, token_ids: Vec<TokenId>, mining_pool: AccountId) {
-        let owner_id = env::predecessor_account_id();
+        env::log(
+            format!(
+                "This function is underconstruction. {}, {}", token_ids.len(), mining_pool
+            ).as_bytes());
 
     }
 

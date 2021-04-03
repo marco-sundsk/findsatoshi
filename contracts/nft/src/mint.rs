@@ -13,7 +13,13 @@ impl Contract {
         let quantity: u64 = metadata.copies.unwrap_or(1.into()).into();
 
         assert!(
-            self.metadata_by_id.insert(&metadata_id, &metadata).is_none(),
+            self.token_metadata_by_id.insert(&metadata_id, &metadata).is_none(),
+            "This ID already exists"
+        );
+
+        let miner_metadata: MinerMetadata = near_sdk::serde_json::from_str(&metadata.extra.unwrap()).expect("extra msg illegal!");
+        assert!(
+            self.miner_metadata_by_id.insert(&metadata_id, &miner_metadata).is_none(),
             "This ID already exists"
         );
 
@@ -22,7 +28,8 @@ impl Contract {
                 sn: format!("{}", sn_number),
                 owner_id: token_owner.as_ref().clone(),
                 metadata_id: metadata_id.clone(),
-                
+                miner_metadata_id: metadata_id.clone(),
+
                 operator: token_owner.as_ref().clone(),
                 status: 0,
                 switch: 0,
@@ -50,7 +57,7 @@ impl Contract {
         let quantity: u64 = metadata.copies.unwrap_or(1.into()).into();
 
         assert!(
-            self.metadata_by_id.insert(&metadata_id, &metadata).is_none(),
+            self.token_metadata_by_id.insert(&metadata_id, &metadata).is_none(),
             "This ID already exists"
         );
 

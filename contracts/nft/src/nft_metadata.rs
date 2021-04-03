@@ -29,6 +29,15 @@ pub struct TokenMetadata {
     reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }
 
+/// custom metadata of Miner Machine, parsed from TokenMetadata::extra
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MinerMetadata {
+    pub category: String,
+    pub thash: u32,
+    pub w: u32,
+}
+
 pub trait NonFungibleTokenMetadata {
     fn nft_metadata(&self) -> NFTMetadata;
 }
