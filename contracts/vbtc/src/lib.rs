@@ -24,15 +24,18 @@ near_sdk::setup_alloc!();
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
     pub ft: FungibleToken,
+
+    pub minter_id: AccountId,
 }
 
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new() -> Self {
+    pub fn new(minter_id: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         Self {
             ft: FungibleToken::new(b"a".to_vec()),
+            minter_id: minter_id.into(),
         }
     }
 }

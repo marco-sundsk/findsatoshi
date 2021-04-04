@@ -1,47 +1,24 @@
 use crate::*;
-use near_sdk::json_types::U128;
-use near_sdk::{assert_one_yocto, env, log, Promise};
+use near_sdk::{env, log, Balance};
 
 #[near_bindgen]
 impl Contract {
-    /// Deposit NEAR to mint wNEAR tokens to the predecessor account in this contract.
+    /// mint vbtc.
     /// Requirements:
-    /// * The predecessor account doesn't need to be registered.
-    /// * Requires positive attached deposit.
-    /// * If account is not registered will fail if attached deposit is below registration limit.
-    #[payable]
-    pub fn near_deposit(&mut self) {
-        let mut amount = env::attached_deposit();
-        assert!(amount > 0, "Requires positive attached deposit");
-        let account_id = env::predecessor_account_id();
-        if !self.ft.accounts.contains_key(&account_id) {
-            // Not registered, register if enough $NEAR has been attached.
-            // Subtract registration amount from the account balance.
-            assert!(
-                amount >= self.ft.storage_balance_bounds().min.0,
-                "ERR_DEPOSIT_TOO_SMALL"
-            );
-            self.ft.internal_register_account(&account_id);
-            amount -= self.ft.storage_balance_bounds().min.0;
+    /// * The predecessor account must be minter.
+    /// * No need to deposit near, cause minter would care about the storage fee of this contract.
+    /// * If account is not registered, will be auto registered.
+    pub fn mint(&mut self, amount: Balance, receiver_id: ValidAccountId) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.minter_id,
+             "Only minter can mint vBTC");
+        if !self.ft.accounts.contains_key(receiver_id.as_ref()) {
+            // Not registered, register
+            self.ft.internal_register_account(receiver_id.as_ref());
         }
-        self.ft.internal_deposit(&account_id, amount);
-        log!("Deposit {} NEAR to {}", amount, account_id);
+        self.ft.internal_deposit(receiver_id.as_ref(), amount);
+        log!("Mint {} sa-vBTC to {}", amount, receiver_id);
     }
 
-    /// Withdraws wNEAR and send NEAR back to the predecessor account.
-    /// Requirements:
-    /// * The predecessor account should be registered.
-    /// * `amount` must be a positive integer.
-    /// * The predecessor account should have at least the `amount` of wNEAR tokens.
-    /// * Requires attached deposit of exactly 1 yoctoNEAR.
-    #[payable]
-    pub fn near_withdraw(&mut self, amount: U128) -> Promise {
-        assert_one_yocto();
-        let account_id = env::predecessor_account_id();
-        let amount = amount.into();
-        self.ft.internal_withdraw(&account_id, amount);
-        log!("Withdraw {} NEAR from {}", amount, account_id);
-        // Transferring NEAR and refunding 1 yoctoNEAR.
-        Promise::new(account_id).transfer(amount + 1)
-    }
 }
