@@ -115,7 +115,7 @@ impl Contract {
         (from_index..std::cmp::min(from_index + limit, tokenids.len() as u64)).map(
             |index| (
                 (*tokenids.get(index as usize).unwrap()).clone(), 
-                self.tokens_by_id.get(tokenids.get(index as usize).unwrap()).unwrap())
+                self.miners_by_id.get(tokenids.get(index as usize).unwrap()).unwrap())
         ).collect::<HashMap<_,_>>()
     }
 
@@ -139,7 +139,7 @@ impl Contract {
         (from_index..std::cmp::min(from_index + limit, retids.len() as u64)).map(
             |index| (
                 (*retids.get(index as usize).unwrap()).clone(), 
-                self.tokens_by_id.get(retids.get(index as usize).unwrap()).unwrap())
+                self.miners_by_id.get(retids.get(index as usize).unwrap()).unwrap())
         ).collect::<HashMap<_,_>>()
     }
 

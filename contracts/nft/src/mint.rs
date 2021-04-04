@@ -40,8 +40,8 @@ impl Contract {
             };
             let token_id: String = format!("{}#{}", token.metadata_id, token.sn);
             assert!(
-                self.tokens_by_id.insert(&token_id, &token).is_none(),
-                "Token already exists"
+                self.miners_by_id.insert(&token_id, &token).is_none(),
+                "Miner already exists"
             );
             self.internal_add_token_to_owner(&token.owner_id, &token_id);
         }

@@ -36,7 +36,7 @@ impl Contract {
         self.assert_owner();
 
         if env::block_index() < self.current_epoch_start_at + self.min_interval_of_epoch {
-            env::panic("not log from last settlement.".as_bytes())
+            env::panic("not long from last settlement.".as_bytes())
         }
         self.current_epoch_start_at = env::block_index();
 
@@ -58,7 +58,7 @@ impl Contract {
     pub fn batch_poweron_miners(&mut self, token_ids: Vec<TokenId>,) {
         let owner_id = env::predecessor_account_id();
         for token_id in token_ids.iter() {
-            let mut miner = self.tokens_by_id.get(token_id).expect("Miner doesn't exist");
+            let mut miner = self.miners_by_id.get(token_id).expect("Miner doesn't exist");
             if miner.owner_id != owner_id || miner.owner_id != miner.operator {
                 env::panic("No control of this miner.".as_bytes())
             }
@@ -77,7 +77,7 @@ impl Contract {
                 // udapte power events
                 self.internal_add_to_power_event(&token_id, &mining_epoch);
                 // udpate miner itself
-                self.tokens_by_id.insert(&token_id, &miner);
+                self.miners_by_id.insert(&token_id, &miner);
             }
         }
     }
@@ -85,7 +85,7 @@ impl Contract {
     pub fn batch_poweroff_miners(&mut self, token_ids: Vec<TokenId>,) {
         let owner_id = env::predecessor_account_id();
         for token_id in token_ids.iter() {
-            let mut miner = self.tokens_by_id.get(token_id).expect("Miner doesn't exist");
+            let mut miner = self.miners_by_id.get(token_id).expect("Miner doesn't exist");
             if miner.owner_id != owner_id || miner.owner_id != miner.operator {
                 env::panic("No control of this miner.".as_bytes())
             }
@@ -100,7 +100,7 @@ impl Contract {
                 // refund power
                 miner.power_left += self.get_power_refund(miner.power_deadline - self.current_mining_epoch, &metadata);
                 // udpate miner itself
-                self.tokens_by_id.insert(&token_id, &miner);
+                self.miners_by_id.insert(&token_id, &miner);
             }
         }
     }

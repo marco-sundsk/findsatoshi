@@ -95,7 +95,7 @@ impl Contract {
         account_id: &AccountId,
         token_id: &TokenId,
     ) {
-        let token = self.tokens_by_id.get(token_id).expect("Internal Error:");
+        let token = self.miners_by_id.get(token_id).expect("Internal Error:");
 
         let mut miner_metadata_map = self
             .miners_per_owner
@@ -116,7 +116,7 @@ impl Contract {
         account_id: &AccountId,
         token_id: &TokenId,
     ) {
-        let token = self.tokens_by_id.get(token_id).expect("Internal Error:");
+        let token = self.miners_by_id.get(token_id).expect("Internal Error:");
 
         let mut miner_metadata_map = self
             .miners_per_owner
@@ -157,7 +157,7 @@ impl Contract {
             power_left,
             power_deadline,
             approved_account_ids,
-        } = self.tokens_by_id.get(token_id).expect("Token not found");
+        } = self.miners_by_id.get(token_id).expect("Token not found");
         if sender_id != &owner_id && !approved_account_ids.contains(sender_id) {
             env::panic(b"Unauthorized");
         }
@@ -198,7 +198,7 @@ impl Contract {
             power_deadline,
             approved_account_ids: Default::default(),
         };
-        self.tokens_by_id.insert(token_id, &token);
+        self.miners_by_id.insert(token_id, &token);
 
         if let Some(memo) = memo {
             env::log(format!("Memo: {}", memo).as_bytes());

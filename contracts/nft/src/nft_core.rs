@@ -135,13 +135,13 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_approve_account_id(&mut self, token_id: TokenId, account_id: ValidAccountId) -> bool {
         assert_one_yocto();
-        let mut token = self.tokens_by_id.get(&token_id).expect("Token not found");
+        let mut token = self.miners_by_id.get(&token_id).expect("Token not found");
         assert_eq!(&env::predecessor_account_id(), &token.owner_id);
         let account_id: AccountId = account_id.into();
         let storage_used = bytes_for_approved_account_id(&account_id);
         if token.approved_account_ids.insert(account_id) {
             deposit_refund(storage_used);
-            self.tokens_by_id.insert(&token_id, &token);
+            self.miners_by_id.insert(&token_id, &token);
             true
         } else {
             false
@@ -151,14 +151,14 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_revoke_account_id(&mut self, token_id: TokenId, account_id: ValidAccountId) -> bool {
         assert_one_yocto();
-        let mut token = self.tokens_by_id.get(&token_id).expect("Token not found");
+        let mut token = self.miners_by_id.get(&token_id).expect("Token not found");
         let predecessor_account_id = env::predecessor_account_id();
         assert_eq!(&predecessor_account_id, &token.owner_id);
         if token.approved_account_ids.remove(account_id.as_ref()) {
             let storage_released = bytes_for_approved_account_id(account_id.as_ref());
             Promise::new(env::predecessor_account_id())
                 .transfer(Balance::from(storage_released) * STORAGE_PRICE_PER_BYTE);
-            self.tokens_by_id.insert(&token_id, &token);
+            self.miners_by_id.insert(&token_id, &token);
             true
         } else {
             false
@@ -168,22 +168,22 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_revoke_all(&mut self, token_id: TokenId) {
         assert_one_yocto();
-        let mut token = self.tokens_by_id.get(&token_id).expect("Token not found");
+        let mut token = self.miners_by_id.get(&token_id).expect("Token not found");
         let predecessor_account_id = env::predecessor_account_id();
         assert_eq!(&predecessor_account_id, &token.owner_id);
         if !token.approved_account_ids.is_empty() {
             refund_approved_account_ids(predecessor_account_id, &token.approved_account_ids);
             token.approved_account_ids.clear();
-            self.tokens_by_id.insert(&token_id, &token);
+            self.miners_by_id.insert(&token_id, &token);
         }
     }
 
     fn nft_total_supply(&self) -> U64 {
-        self.tokens_by_id.len().into()
+        self.miners_by_id.len().into()
     }
 
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
-        self.tokens_by_id.get(&token_id)
+        self.miners_by_id.get(&token_id)
     }
 }
 
@@ -210,7 +210,7 @@ impl NonFungibleTokenResolver for Contract {
             }
         }
 
-        let mut token = if let Some(token) = self.tokens_by_id.get(&token_id) {
+        let mut token = if let Some(token) = self.miners_by_id.get(&token_id) {
             if &token.owner_id != &receiver_id {
                 // The token is not owner by the receiver anymore. Can't return it.
                 refund_approved_account_ids(owner_id, &approved_account_ids);
@@ -230,7 +230,7 @@ impl NonFungibleTokenResolver for Contract {
         token.owner_id = owner_id;
         refund_approved_account_ids(receiver_id, &token.approved_account_ids);
         token.approved_account_ids = approved_account_ids;
-        self.tokens_by_id.insert(&token_id, &token);
+        self.miners_by_id.insert(&token_id, &token);
 
         false
     }

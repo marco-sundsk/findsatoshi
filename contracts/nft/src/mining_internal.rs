@@ -93,9 +93,9 @@ impl Contract {
         let miners = self.power_events.get(&self.current_mining_epoch)
             .unwrap_or(UnorderedSet::new(b"non-relevant".to_vec()));
         for token_id in miners.iter() {
-            let mut miner = self.tokens_by_id.get(&token_id).expect("Internal Error: Miner not exist.");
+            let mut miner = self.miners_by_id.get(&token_id).expect("Internal Error: Miner not exist.");
             miner.switch = PW_OFF;
-            self.tokens_by_id.insert(&token_id, &miner);
+            self.miners_by_id.insert(&token_id, &miner);
 
             let miner_metadata: MinerMetadata = self.miner_metadata_by_id.get(&miner.miner_metadata_id)
                 .expect("Internal Error: No miner_metadata");

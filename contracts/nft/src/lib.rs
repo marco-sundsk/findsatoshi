@@ -65,36 +65,54 @@ pub struct Token {
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-
-    /// each miner in one miner-type is individual, record as Token structure. 
-    pub miners_per_owner: LookupMap<AccountId, UnorderedMap<TokenMetadataId, UnorderedSet<TokenId>>>,
-    
-    /// unlike miners, the copies of one power-nft is identical, we only record copy amount.
-    pub powers_per_owner: LookupMap<AccountId, UnorderedMap<TokenMetadataId, u32>>,
-
-    /// TokenId is formed as TokenMetadataId + "#" + TokenSeqNum
-    pub tokens_by_id: UnorderedMap<TokenId, Token>,
-    /// TokenMetadataId is designated by owner when mint
-    pub token_metadata_by_id: UnorderedMap<TokenMetadataId, TokenMetadata>,
-
-    pub miner_metadata_by_id: UnorderedMap<MinerMetadataId, MinerMetadata>,
-
+    /// owner of this contract
     pub owner_id: AccountId,
 
+    //*********************
+    //  NFT PARTS
+    //*********************
+    /// TokenMetadataId is designated by owner when mint
+    /// Token includes miners and e-powers
+    pub token_metadata_by_id: UnorderedMap<TokenMetadataId, TokenMetadata>,
+
+    /// only miners have this metadata
+    pub miner_metadata_by_id: UnorderedMap<MinerMetadataId, MinerMetadata>,
+
+    /// each miner is a token,
+    /// TokenId is formed as TokenMetadataId + "#" + TokenSeqNum
+    pub miners_by_id: UnorderedMap<TokenId, Token>,
+
+    /// user -> MinerMetadataId -> UnorderedSet<TokenId>
+    pub miners_per_owner: LookupMap<AccountId, UnorderedMap<MinerMetadataId, UnorderedSet<TokenId>>>,
+    
+    /// user -> TokenMetadataId -> copys
+    /// unlike miners, the copies of one power-nft is identical, we only record copy amount.
+    pub powers_per_owner: LookupMap<AccountId, UnorderedMap<TokenMetadataId, u32>>,
 
     // pub metadata: NFTMetadata
 
     // *****************************************
-    // mining relative member
-    pub current_mining_epoch: MiningEpoch,
-    pub current_epoch_start_at: BlockHeight,
-    pub current_total_thash: Thash,
-    pub current_vbtc_amount_per_epoch: Balance,
-    pub min_interval_of_epoch: BlockHeight,
+    //        MINING PARTS
+    // *****************************************
     
+    /// each epoch, we distribute epoch_award to some miner or pool
+    pub current_mining_epoch: MiningEpoch,
+    pub epoch_award: Balance,
+    
+    /// we can only settle epoch after interval blocks from previous epoch
+    pub min_interval_of_epoch: BlockHeight,
+    pub current_epoch_start_at: BlockHeight,
+
+    /// The total thash that participate in settlement.
+    /// And we choose winner from entities according to their Thash.
+    /// current_total_thash = Sum(mining_entities.Thash)
+    pub current_total_thash: Thash,    
     pub mining_entities: UnorderedMap<AccountId, Thash>,
+
+    /// e-power consuming when participate in settlement
     pub power_events: LookupMap<MiningEpoch, UnorderedSet<TokenId>>,
 
+    /// mining pool supports
     pub mining_pools: UnorderedMap<AccountId, MiningPool>,
 
 }
@@ -109,7 +127,7 @@ impl Contract {
             miners_per_owner: LookupMap::new(b"a".to_vec()),
             powers_per_owner: LookupMap::new(b"b".to_vec()),
 
-            tokens_by_id: UnorderedMap::new(b"c".to_vec()),
+            miners_by_id: UnorderedMap::new(b"c".to_vec()),
             token_metadata_by_id: UnorderedMap::new(b"d".to_vec()),
             miner_metadata_by_id: UnorderedMap::new(b"e".to_vec()),
             
@@ -118,7 +136,7 @@ impl Contract {
             current_mining_epoch: 0,
             current_epoch_start_at: env::block_index(),
             current_total_thash: 0,
-            current_vbtc_amount_per_epoch: 2500000000,
+            epoch_award: 2500000000,
             min_interval_of_epoch: 3600,
             mining_pools: UnorderedMap::new(b"f".to_vec()),
             mining_entities: UnorderedMap::new(b"g".to_vec()),
