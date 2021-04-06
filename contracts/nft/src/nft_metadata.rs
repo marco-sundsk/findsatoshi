@@ -1,5 +1,7 @@
 use crate::*;
 
+/// This structure is from NEAR-NFT-Standard 
+/// to indicate top-level infomation of NFT managed by this contract
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct NFTMetadata {
@@ -12,6 +14,10 @@ pub struct NFTMetadata {
     reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }
 
+/// This structure is from NEAR-NFT-Standard 
+/// to indicate NFT token's metadata
+/// Custom information are store in extra field with json-str 
+/// And copies is the token amount that belongs to this metadata
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TokenMetadata {
@@ -30,9 +36,11 @@ pub struct TokenMetadata {
 }
 
 /// custom metadata of Miner Machine, parsed from TokenMetadata::extra
+/// This is the actual Miner Type structure we used allthrough this contract
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MinerMetadata {
+    pub producer: String,
     pub category: String,
     pub thash: u32,
     pub w: u32,

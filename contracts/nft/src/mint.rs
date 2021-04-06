@@ -1,7 +1,47 @@
 use crate::*;
 
+const TGAS: f32 = 0.000000000001;
+
 #[near_bindgen]
 impl Contract {
+
+    /// Find relations of iterator and gas
+    pub fn see_gas(&mut self, copies: U64) -> U64 {
+        let quantity: u64 = copies.into();
+        
+        self.current_total_thash = quantity as u32 * 100;
+        let value = self.make_random_value();
+        let biggest_value = self.current_total_thash as u32 - 1;
+        env::log(
+            format!(
+                "random is {}, we take {} as max.", value, biggest_value
+            ).as_bytes());
+
+        let keys = self.miner_metadata_by_id.keys_as_vector();
+
+        let mut border: Thash = 0;
+
+        for index in 0..quantity {
+            let non_relevant1 = keys.get(0).unwrap();
+            let non_relevant2 = self.miner_metadata_by_id.get(&String::from("mid-001")).unwrap();
+            let thash = 100;
+            border += thash;
+            if border > biggest_value {
+                env::log(
+                    format!(
+                        "Found : #{} as winner.", index
+                    ).as_bytes());
+                break;
+            }
+        }
+
+        env::log(
+            format!(
+                "used gas: {}.", env::used_gas() as f32 * TGAS
+            ).as_bytes());
+        
+        (value as u64).into()
+    }
 
     /// mint miner nft
     pub fn create_new_miners(&mut self, token_owner: ValidAccountId, 
